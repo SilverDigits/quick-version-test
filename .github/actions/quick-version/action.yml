@@ -215,10 +215,6 @@ runs:
         # Enforce minimum base version of 0.1.0 if starting from 0.0.x
         if($baseVersion.Major -eq 0 -and $baseVersion.Minor -eq 0) {
           $baseVersion = [QuickVersion]::new(0,1,0,0,"",0,"")
-        }
-
-        # Force min version constriants to 1.0
-        if($baseVersion.Major -eq 0 -and $baseVersion.Minor -eq 0) {
           $nextVersionMajor = $baseVersion.Clone()
           $nextVersionMinor = $baseVersion.Clone()
           $nextVersionPatch = $baseVersion.Clone()
