@@ -147,11 +147,19 @@ runs:
             # Serialize complex types as JSON
             $jsonMessages = $messages | ConvertTo-Json -Depth 6
             $jsonProdVers = $prodVersions | ConvertTo-Json -Depth 6
-            "lastVersion=$($lastVersion.ToString())"           >> $env:GITHUB_OUTPUT
-            "nextVersionMajor=$($nextVersionMajor.ToString())" >> $env:GITHUB_OUTPUT
-            "nextVersionMinor=$($nextVersionMinor.ToString())" >> $env:GITHUB_OUTPUT
-            "nextVersionPatch=$($nextVersionPatch.ToString())" >> $env:GITHUB_OUTPUT
-            "nextVersionBuild=$($nextVersionBuild.ToString())" >> $env:GITHUB_OUTPUT
-            "messagesJson=$jsonMessages"                       >> $env:GITHUB_OUTPUT
-            "productionVersionsJson=$jsonProdVers"             >> $env:GITHUB_OUTPUT
+
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("lastVersion=$($lastVersion.ToString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionMajor=$($nextVersionMajor.ToString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionMinor=$($nextVersionMinor.ToString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionPatch=$($nextVersionPatch.ToString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionBuild=$($nextVersionBuild.ToString())")
+
+            # Multi-line values must use the EOF delimiter
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "messagesJson<<EOF"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $jsonMessages
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
+
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "productionVersionsJson<<EOF"
+            Add-Content -Path $env:GITHUB_OUTPUT -Value $jsonProdVers
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
         }
