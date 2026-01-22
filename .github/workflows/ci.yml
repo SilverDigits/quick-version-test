@@ -19,8 +19,8 @@ jobs:
         shell: pwsh
         run: |
           $event = "${{ github.event_name }}"
-          $ref   = "${{ github.ref_name }}"   # for push events, this is the branch name (e.g., 'main' or 'staging')
-          $base  = "${{ github.base_ref }}"   # for pull_request events, this is the target branch (e.g., 'main' or 'staging')
+          $ref   = "${{ github.ref_name }}"
+          $base  = "${{ github.base_ref }}"
 
           $label = ""
           $build = $true
@@ -40,8 +40,10 @@ jobs:
             $label = 'none'
             $build = $false
           }
+
+          # force lowercase boolean for consistent condition checks
           "label=$label" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          "build=$build" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "build=$($build.ToString().ToLower())" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
 
       - name: Compute Version
         id: version
@@ -51,16 +53,16 @@ jobs:
           build-metadata: 'sha${{ github.sha }}'
       
       - name: Display Version Info
+        shell: pwsh
         run: |
-          echo "Build Package: ${{ steps.package_options.outputs.build }}"
-          echo "Package Label: ${{ steps.package_options.outputs.label }}
-          echo "Major: ${{ steps.version.outputs.major }}"
-          echo "Minor: ${{ steps.version.outputs.minor }}"
-          echo "Patch: ${{ steps.version.outputs.patch }}"
-          echo "Build: ${{ steps.version.outputs.build }}"
-          echo "Version: ${{ steps.version.outputs.version }}"
-          echo "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
-
+          Write-Host "Build Package: ${{ steps.package_options.outputs.build }}"
+          Write-Host "Package Label: ${{ steps.package_options.outputs.label }}"
+          Write-Host "Major: ${{ steps.version.outputs.major }}"
+          Write-Host "Minor: ${{ steps.version.outputs.minor }}"
+          Write-Host "Patch: ${{ steps.version.outputs.patch }}"
+          Write-Host "Build: ${{ steps.version.outputs.build }}"
+          Write-Host "Version: ${{ steps.version.outputs.version }}"
+          Write-Host "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
 
       - name: Generate Package Artifacts (if applicable)
         if: ${{ steps.package_options.outputs.build == 'true' }}

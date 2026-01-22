@@ -29,7 +29,7 @@ outputs:
     value: ${{ steps.compute.outputs.version }}
   label:
     description: "The version label, e.g., rc.1+sha3efddf..."
-    value: ${{ steps.compute.outputs.major }}
+    value: ${{ steps.compute.outputs.label }}   # <-- fixed (was major)
   infoVersion:
     description: "The informational vesion in the format #.#.#.#-LABEL, e.g., 1.2.3.4-rc.1+sha3efddf..."
     value: ${{ steps.compute.outputs.infoVersion }}
@@ -40,7 +40,8 @@ runs:
     - id: compute
       shell: pwsh
       run: |
-        if(Test-Path "./git/shallow") {
+        # check correct shallow file path
+        if (Test-Path ".git/shallow") {
           Write-Warning "A non-shallow checkout must be done prior to using quick-version, i.e., fetch-depth: 0"
           exit 1
         }
