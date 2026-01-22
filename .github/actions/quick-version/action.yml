@@ -125,6 +125,49 @@ runs:
             $lastVersion = [QuickVersion]::new(0,0,0,0,"",0,"")
         }
 
+        # ---------------------------------------------------------------------------------------------
+        # Compute next version based on commit messages and inputs
+        # ---------------------------------------------------------------------------------------------
+        # TODO: Need to compute the next version based on commit messages and version-label input
+        # if version-label is empty, use next production version based on commit messages
+        # if version-label is non-empty, use the next pre-release version where the ReleaseLabel is
+        # the matches the version-label input and use number of commits since last production version as the
+        # ReleaseBuild number. If no commits since last production version.
+        $nextVersion = $null
+        # END OF TODO
+
+        # Determine bump from conventional commit messages (breaking -> major, feat -> minor, fix -> patch, any other commit -> build)
+        $isBreaking = ($messages | Where-Object { $_.Message -match 'BREAKING CHANGE' -or $_.Message -match 'BREAKING-CHANGE' -or ($_.Type -match '.*!$') }).Count
+        $hasFeat = ($messages | Where-Object { $_.Type -ieq 'feat' }).Count
+        $hasFix = ($messages | Where-Object { $_.Type -ieq 'fix' }).Count
+
+        if ($isBreaking -gt 0) { $bump = 'major' }
+        elseif ($hasFeat -gt 0) { $bump = 'minor' }
+        elseif ($hasFix -gt 0) { $bump = 'patch' }
+        elseif ($messages.Count -gt 0) { $bump = 'build' }
+        else { $bump = 'none' }
+
+        # Inputs from composite action become environment variables INPUT_<NAME> (hyphens -> underscores)
+        $inputLabel = $env:INPUT_VERSION_LABEL
+        $inputMetadata = $env:INPUT_BUILD_METADATA
+
+        switch ($bump) {
+            'major' { $candidate = $nextVersionMajor }
+            'minor' { $candidate = $nextVersionMinor }
+            'patch' { $candidate = $nextVersionPatch }
+            'build' { $candidate = $nextVersionBuild }
+            default { $candidate = $nextVersionBuild }
+        }
+
+        if ([string]::IsNullOrWhiteSpace($inputLabel)) {
+            # Production next version
+            $nextVersion = $candidate
+        } else {
+            # Pre-release: base on candidate and use commits-since-last-production as ReleaseBuild (>=1)
+            $releaseBuild = if ($messages.Count -gt 0) { $messages.Count } else { 1 }
+            $nextVersion = [QuickVersion]::new($candidate.Major, $candidate.Minor, $candidate.Patch, $candidate.Build, $inputLabel, $releaseBuild, $inputMetadata)
+        }
+
         $nextVersionMajor = [QuickVersion]::new($lastVersion.Major + 1, 0, 0, 0, "", 0, "")
         $nextVersionMinor = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor + 1, 0, 0, "", 0, "")
         $nextVersionPatch = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch + 1, 0, "", 0, "")
@@ -144,6 +187,7 @@ runs:
         $messages | ForEach-Object { Write-Host (" - {0}: {1}" -f $_.Type, $_.Message) }
 
         # If running inside GitHub Actions and you want outputs:
+        # If running inside GitHub Actions and you want outputs:
         if ($env:GITHUB_OUTPUT) {
             # Serialize complex types as JSON
             $jsonMessages = $messages | ConvertTo-Json -Depth 6
@@ -154,6 +198,27 @@ runs:
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionMinor=$($nextVersionMinor.ToString())")
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionPatch=$($nextVersionPatch.ToString())")
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("nextVersionBuild=$($nextVersionBuild.ToString())")
+
+            # Primary computed next version outputs
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("major=$($nextVersion.Major)")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("minor=$($nextVersion.Minor)")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("patch=$($nextVersion.Patch)")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("build=$($nextVersion.Build)")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("version=$($nextVersion.ToString())")
+
+            $labelStr = ""
+            if (-not [string]::IsNullOrWhiteSpace($nextVersion.ReleaseLabel)) {
+                if ([string]::IsNullOrWhiteSpace($nextVersion.ReleaseNote)) {
+                    $labelStr = "$($nextVersion.ReleaseLabel).$($nextVersion.ReleaseBuild)"
+                } else {
+                    $labelStr = "$($nextVersion.ReleaseLabel).$($nextVersion.ReleaseBuild)+$($nextVersion.ReleaseNote)"
+                }
+            }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("label=$labelStr")
+
+            $infoVersion = $nextVersion.ToString()
+            if (-not [string]::IsNullOrWhiteSpace($labelStr)) { $infoVersion = "$infoVersion-$labelStr" }
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("infoVersion=$infoVersion")
 
             # Multi-line values must use the EOF delimiter
             Add-Content -Path $env:GITHUB_OUTPUT -Value "messagesJson<<EOF"
