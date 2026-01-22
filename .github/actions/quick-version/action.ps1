@@ -34,6 +34,10 @@ class QuickVersion {
         return [string]::IsNullOrWhiteSpace($this.ReleaseLabel) -and [string]::IsNullOrWhiteSpace($this.ReleaseNote)
     }
 
+    [QuickVersion] Clone() {
+        return [QuickVersion]::new($this.Major, $this.Minor, $this.Patch, $this.Build, $this.ReleaseLabel, $this.ReleaseBuild, $this.ReleaseNote)
+    }
+
     [string] ToString() {
         $base = "{0}.{1}.{2}.{3}" -f $this.Major, $this.Minor, $this.Patch, $this.Build
         if ([string]::IsNullOrWhiteSpace($this.ReleaseLabel)) {
