@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: ['main']
   workflow_dispatch:
+
+permissions:
+  contents: write      # needed to create tags/releases
+  packages: write      # needed for GHCR push
+  id-token: write      # optional if you use OIDC for cloud deploys
+  actions: read
+ 
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -44,9 +51,9 @@ jobs:
         uses: ./.github/actions/quick-version
         with:
           version-label: ${{ steps.package_options.outputs.label }}
-          build-metadata: 'sha${{ github.sha }}'
           include-paths: 'src/;source/;lib/'
           exclude-paths: 'docs/;tests/;.github/'
+          #build-metadata: 'sha${{ github.sha }}'
 
       - name: Display Version Info
         shell: pwsh
