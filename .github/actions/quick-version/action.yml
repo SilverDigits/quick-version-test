@@ -44,24 +44,28 @@ runs:
           Write-Warning "A non-shallow checkout must be done prior to using quick-version, i.e., fetch-depth: 0"
           exit 1
         }
-        
+
         . (Join-Path $env:GITHUB_ACTION_PATH 'action.ps1')
 
         # ---------------------------------------------------------------------------------------------
         # Build tag → commit map; parse all tag versions
         # ---------------------------------------------------------------------------------------------
-        $tagLines = git for-each-ref refs/tags --format="%(refname:short)|%(objecttype)|%(objectname)|%(taggedobject)"
+        $tagLines = git for-each-ref refs/tags --format="%(refname:short)|%(objecttype)|%(objectname)"
         $tagMap = @{}  # commitSha -> List[QuickVersion]
         $allVersions = New-Object 'System.Collections.Generic.List[QuickVersion]'
 
         foreach ($line in $tagLines) {
             if ([string]::IsNullOrWhiteSpace($line)) { continue }
-            $parts = $line -split '\|', 4
+            $parts = $line -split '\|', 3
             if ($parts.Count -lt 3) { continue }
-            $name = $parts[0]; $otype = $parts[1]; $obj = $parts[2]; $tagged = if ($parts.Count -ge 4) { $parts[3] } else { "" }
+            $name = $parts[0]; $otype = $parts[1]; $obj = $parts[2]
 
-            # Resolve commit SHA for lightweight vs annotated tags
-            $commitSha = if ($otype -eq 'tag' -and -not [string]::IsNullOrWhiteSpace($tagged)) { $tagged } else { $obj }
+            # Resolve commit SHA for lightweight vs annotated tags (peel annotated tags)
+            if ($otype -eq 'tag') {
+                $commitSha = (git rev-parse "$name^{}").Trim()
+            } else {
+                $commitSha = $obj
+            }
 
             $ver = [QuickVersion]::Parse($name)
             if ($null -ne $ver) {
