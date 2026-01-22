@@ -196,7 +196,6 @@
         Write-Host " - build-metadata  : $($inputMetadata)"
         Write-Host " - include-paths   : $($includeRaw)"
         Write-Host " - exclude-paths   : $($excludeRaw)"
-        Write-Host ""
 
         Write-Host "Last Version                 : $($lastVersion.ToString())"
         Write-Host " - Major                     : $($lastVersion.Major)"
@@ -214,7 +213,6 @@
         Write-Host " - ReleaseLabel              : $($baseVersion.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($baseVersion.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($baseVersion.ReleaseNote)"
-        Write-Host ""
 
         Write-Host "Next Prodcution Major        : $($nextVersionMajor.ToString())"
         Write-Host " - Major                     : $($nextVersionMajor.Major)"
@@ -223,7 +221,6 @@
         Write-Host " - ReleaseLabel              : $($nextVersionMajor.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionMajor.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionMajor.ReleaseNote)"
-        Write-Host ""
 
         Write-Host "Next Prodcution Minor        : $($nextVersionMinor.ToString())"
         Write-Host " - Major                     : $($nextVersionMinor.Major)"
@@ -232,7 +229,6 @@
         Write-Host " - ReleaseLabel              : $($nextVersionMinor.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionMinor.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionMinor.ReleaseNote)"
-        Write-Host ""
 
         Write-Host "Next Prodcution Patch        : $($nextVersionPatch.ToString())"
         Write-Host " - Major                     : $($nextVersionPatch.Major)"
@@ -241,16 +237,6 @@
         Write-Host " - ReleaseLabel              : $($nextVersionPatch.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionPatch.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionPatch.ReleaseNote)"
-        Write-Host ""
-
-        Write-Host "Next Prodcution Build        : $($nextVersionBuild.ToString())"
-        Write-Host " - Major                     : $($nextVersionBuild.Major)"
-        Write-Host " - Minor                     : $($nextVersionBuild.Minor)"
-        Write-Host " - Patch                     : $($nextVersionBuild.Patch)"
-        Write-Host " - ReleaseLabel              : $($nextVersionBuild.ReleaseLabel)"
-        Write-Host " - ReleaseBuild              : $($nextVersionBuild.ReleaseBuild)"
-        Write-Host " - ReleaseNote               : $($nextVersionBuild.ReleaseNote)"
-        Write-Host ""
 
         Write-Host "Next Package Version:        : $($nextVersion.ToString())"
         Write-Host " - Major                     : $($nextVersion.Major)"
