@@ -26,9 +26,6 @@ outputs:
   minor:
     description: "The minor version number"
     value: ${{ steps.compute.outputs.minor }}
-  build:
-    description: "The build version number"
-    value: ${{ steps.compute.outputs.build }}
   patch:
     description: "The patch version number"
     value: ${{ steps.compute.outputs.patch }}

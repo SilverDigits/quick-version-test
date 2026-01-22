@@ -131,29 +131,26 @@
             $lastVersion = $prodVersions | Sort-Object `
                 @{ e = { $_.Major }; Descending = $true }, `
                 @{ e = { $_.Minor }; Descending = $true }, `
-                @{ e = { $_.Patch }; Descending = $true }, `
-                @{ e = { $_.Build }; Descending = $true } `
+                @{ e = { $_.Patch }; Descending = $true } `
                 | Select-Object -First 1
         } else {
             # No production version found; treat as 0.0.0.0 baseline
-            $lastVersion = [QuickVersion]::new(0,0,0,0,"",0,"")
+            $lastVersion = [QuickVersion]::new(0,0,0,"",0,"")
         }
 
         $baseVersion = $lastVersion.Clone()
 
         # Enforce minimum base version of 0.1.0 if starting from 0.0.x
         if($baseVersion.Major -eq 0 -and $baseVersion.Minor -eq 0) {
-          $baseVersion = [QuickVersion]::new(0,1,0,0,"",0,"")
+          $baseVersion = [QuickVersion]::new(0,1,0,"",0,"")
           $nextVersionMajor = $baseVersion.Clone()
           $nextVersionMinor = $baseVersion.Clone()
           $nextVersionPatch = $baseVersion.Clone()
-          $nextVersionBuild = $baseVersion.Clone()
         }
         else {
-          $nextVersionMajor = [QuickVersion]::new($baseVersion.Major + 1, 0, 0, 0, "", 0, "")
-          $nextVersionMinor = [QuickVersion]::new($baseVersion.Major, $baseVersion.Minor + 1, 0, 0, "", 0, "")
-          $nextVersionPatch = [QuickVersion]::new($baseVersion.Major, $baseVersion.Minor, $baseVersion.Patch + 1, 0, "", 0, "")
-          $nextVersionBuild = [QuickVersion]::new($baseVersion.Major, $baseVersion.Minor, $baseVersion.Patch, $baseVersion.Build + 1, "", 0, "")
+          $nextVersionMajor = [QuickVersion]::new($baseVersion.Major + 1, 0, 0, "", 0, "")
+          $nextVersionMinor = [QuickVersion]::new($baseVersion.Major, $baseVersion.Minor + 1, 0, "", 0, "")
+          $nextVersionPatch = [QuickVersion]::new($baseVersion.Major, $baseVersion.Minor, $baseVersion.Patch + 1, "", 0, "")
         }
 
 
@@ -165,7 +162,6 @@
         if ($isBreaking -gt 0) { $bump = 'major' }
         elseif ($hasFeat -gt 0) { $bump = 'minor' }
         elseif ($hasFix -gt 0) { $bump = 'patch' }
-        elseif ($messages.Count -gt 0) { $bump = 'build' }
         else { $bump = 'none' }
 
         # Inputs from composite action become environment variables INPUT_<NAME> (hyphens -> underscores)
@@ -176,8 +172,7 @@
             'major' { $candidate = $nextVersionMajor }
             'minor' { $candidate = $nextVersionMinor }
             'patch' { $candidate = $nextVersionPatch }
-            'build' { $candidate = $nextVersionBuild }
-            default { $candidate = $nextVersionBuild }
+            default { $candidate = $nextVersionPatch }
         }
 
         if ([string]::IsNullOrWhiteSpace($inputLabel)) {
@@ -187,7 +182,7 @@
             # Pre-release: base on candidate and use commits-since-last-production as ReleaseBuild (>=1)
             # Use commits-since-last-production as the release build number (fallback to 1)
             $releaseBuild = if ($commitsSinceProd -gt 0) { $commitsSinceProd } else { 1 }
-            $nextVersion = [QuickVersion]::new($candidate.Major, $candidate.Minor, $candidate.Patch, $candidate.Build, $inputLabel, $releaseBuild, $inputMetadata)
+            $nextVersion = [QuickVersion]::new($candidate.Major, $candidate.Minor, $candidate.Patch, $inputLabel, $releaseBuild, $inputMetadata)
         }
 
 
@@ -207,7 +202,6 @@
         Write-Host " - Major                     : $($lastVersion.Major)"
         Write-Host " - Minor                     : $($lastVersion.Minor)"
         Write-Host " - Patch                     : $($lastVersion.Patch)"
-        Write-Host " - Build                     : $($lastVersion.Build)"
         Write-Host " - ReleaseLabel              : $($lastVersion.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($lastVersion.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($lastVersion.ReleaseNote)"
@@ -217,7 +211,6 @@
         Write-Host " - Major                     : $($baseVersion.Major)"
         Write-Host " - Minor                     : $($baseVersion.Minor)"
         Write-Host " - Patch                     : $($baseVersion.Patch)"
-        Write-Host " - Build                     : $($baseVersion.Build)"
         Write-Host " - ReleaseLabel              : $($baseVersion.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($baseVersion.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($baseVersion.ReleaseNote)"
@@ -227,7 +220,6 @@
         Write-Host " - Major                     : $($nextVersionMajor.Major)"
         Write-Host " - Minor                     : $($nextVersionMajor.Minor)"
         Write-Host " - Patch                     : $($nextVersionMajor.Patch)"
-        Write-Host " - Build                     : $($nextVersionMajor.Build)"
         Write-Host " - ReleaseLabel              : $($nextVersionMajor.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionMajor.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionMajor.ReleaseNote)"
@@ -237,7 +229,6 @@
         Write-Host " - Major                     : $($nextVersionMinor.Major)"
         Write-Host " - Minor                     : $($nextVersionMinor.Minor)"
         Write-Host " - Patch                     : $($nextVersionMinor.Patch)"
-        Write-Host " - Build                     : $($nextVersionMinor.Build)"
         Write-Host " - ReleaseLabel              : $($nextVersionMinor.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionMinor.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionMinor.ReleaseNote)"
@@ -247,7 +238,6 @@
         Write-Host " - Major                     : $($nextVersionPatch.Major)"
         Write-Host " - Minor                     : $($nextVersionPatch.Minor)"
         Write-Host " - Patch                     : $($nextVersionPatch.Patch)"
-        Write-Host " - Build                     : $($nextVersionPatch.Build)"
         Write-Host " - ReleaseLabel              : $($nextVersionPatch.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionPatch.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionPatch.ReleaseNote)"
@@ -257,7 +247,6 @@
         Write-Host " - Major                     : $($nextVersionBuild.Major)"
         Write-Host " - Minor                     : $($nextVersionBuild.Minor)"
         Write-Host " - Patch                     : $($nextVersionBuild.Patch)"
-        Write-Host " - Build                     : $($nextVersionBuild.Build)"
         Write-Host " - ReleaseLabel              : $($nextVersionBuild.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersionBuild.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersionBuild.ReleaseNote)"
@@ -267,7 +256,6 @@
         Write-Host " - Major                     : $($nextVersion.Major)"
         Write-Host " - Minor                     : $($nextVersion.Minor)"
         Write-Host " - Patch                     : $($nextVersion.Patch)"
-        Write-Host " - Build                     : $($nextVersion.Build)"
         Write-Host " - ReleaseLabel              : $($nextVersion.ReleaseLabel)"
         Write-Host " - ReleaseBuild              : $($nextVersion.ReleaseBuild)"
         Write-Host " - ReleaseNote               : $($nextVersion.ReleaseNote)"
@@ -294,8 +282,9 @@
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("major=$($nextVersion.Major)")
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("minor=$($nextVersion.Minor)")
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("patch=$($nextVersion.Patch)")
-            Add-Content -Path $env:GITHUB_OUTPUT -Value ("build=$($nextVersion.Build)")
             Add-Content -Path $env:GITHUB_OUTPUT -Value ("version=$($nextVersion.ToString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("packageVersion=$($nextVersion.ToPackageVersionString())")
+            Add-Content -Path $env:GITHUB_OUTPUT -Value ("infoVersion=$($nextVersion.ToInfoVersionString())")
 
             $labelStr = ""
             if (-not [string]::IsNullOrWhiteSpace($nextVersion.ReleaseLabel)) {

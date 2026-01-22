@@ -67,7 +67,6 @@ jobs:
           Write-Host "QuickVer.major           : ${{ steps.version.outputs.major }}"          
           Write-Host "QuickVer.minor           : ${{ steps.version.outputs.minor }}"          
           Write-Host "QuickVer.patch           : ${{ steps.version.outputs.patch }}"          
-          Write-Host "QuickVer.build           : ${{ steps.version.outputs.build }}"          
           Write-Host "QuickVer.version         : ${{ steps.version.outputs.version }}"          
           Write-Host "QuickVer.label           : ${{ steps.version.outputs.label }}"          
           Write-Host "QuickVer.infoVersion     : ${{ steps.version.outputs.infoVersion }}"          
@@ -77,7 +76,6 @@ jobs:
           Write-Host "Major: ${{ steps.version.outputs.major }}"
           Write-Host "Minor: ${{ steps.version.outputs.minor }}"
           Write-Host "Patch: ${{ steps.version.outputs.patch }}"
-          Write-Host "Build: ${{ steps.version.outputs.build }}"
           Write-Host "Version: ${{ steps.version.outputs.version }}"
           Write-Host "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
 

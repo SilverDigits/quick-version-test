@@ -5,16 +5,14 @@ class QuickVersion {
     [int]$Major
     [int]$Minor
     [int]$Patch
-    [int]$Build
     [string]$ReleaseLabel      # alpha|beta|rc, empty for production
     [int]$ReleaseBuild         # 0 or greater (optional)
     [string]$ReleaseNote       # [a-z0-9.-]+ (optional)
 
-    QuickVersion([int]$Major, [int]$Minor, [int]$Patch, [int]$Build, [string]$ReleaseLabel, [int]$ReleaseBuild, [string]$ReleaseNote) {
+    QuickVersion([int]$Major, [int]$Minor, [int]$Patch, [string]$ReleaseLabel, [int]$ReleaseBuild, [string]$ReleaseNote) {
         $this.Major = $Major
         $this.Minor = $Minor
         $this.Patch = $Patch
-        $this.Build = $Build
         $this.ReleaseLabel = [String]::IsNullOrEmpty($ReleaseLabel) ? "" : $ReleaseLabel.ToLower()
         $this.ReleaseBuild = $ReleaseBuild
         $this.ReleaseNote = [String]::IsNullOrEmpty($ReleaseNote) ? "" : $ReleaseNote.ToLower()
@@ -24,7 +22,6 @@ class QuickVersion {
         $this.Major = $Major
         $this.Minor = $Minor
         $this.Patch = $Patch
-        $this.Build = $Build
         $this.ReleaseLabel = ""
         $this.ReleaseBuild = 0
         $this.ReleaseNote = ""
@@ -35,25 +32,35 @@ class QuickVersion {
     }
 
     [QuickVersion] Clone() {
-        return [QuickVersion]::new($this.Major, $this.Minor, $this.Patch, $this.Build, $this.ReleaseLabel, $this.ReleaseBuild, $this.ReleaseNote)
+        return [QuickVersion]::new($this.Major, $this.Minor, $this.Patch, $this.ReleaseLabel, $this.ReleaseBuild, $this.ReleaseNote)
+    }
+
+    [string] GetDashComponent() {
+        if ([string]::IsNullOrWhiteSpace($this.ReleaseLabel)) { return "" }
+        $suffix = if ($this.ReleaseBuild -gt 0) { ".{0}" -f $this.ReleaseBuild } else { "" }
+        return "-$($this.ReleaseLabel)$suffix"
+    }
+
+    [string] GetPlusComponent() {
+        if ([string]::IsNullOrWhiteSpace($this.ReleaseNote)) { return "" }
+        return "+$($this.ReleaseNote)"
+    }
+
+    [string] ToAssemblyVersionString() {
+        return "$($this.Major).$($this.Minor).$($this.Patch)"
+    }
+
+    [string] ToPackageVersionString() {
+        return "$($this.Major).$($this.Minor).$($this.Patch)$($this.GetDashComponent())"
+    }
+
+    [string] ToInfoVersionString() {
+        return "$($this.Major).$($this.Minor).$($this.Patch)$($this.GetDashComponent())$($this.GetPlusComponent())"
     }
 
     [string] ToString() {
-        $base = "{0}.{1}.{2}.{3}" -f $this.Major, $this.Minor, $this.Patch, $this.Build
-        if ([string]::IsNullOrWhiteSpace($this.ReleaseLabel)) {
-            $pre = ""
-        }
-        else {
-            if ($this.ReleaseBuild -gt 0) {
-                $pre = "-$($this.ReleaseLabel).$($this.ReleaseBuild)"
-            }
-            else {
-                $pre = "-$($this.ReleaseLabel)"
-            }
-        }
-        $plus = if ([string]::IsNullOrWhiteSpace($this.ReleaseNote)) { "" } else { "+$($this.ReleaseNote)" }
-        return "$base$pre$plus"
-    }   
+        return $this.ToInfoVersionString()
+    }
     
     static [QuickVersion] Parse([string]$Value) {
         $s = $Value.Trim()
@@ -69,16 +76,16 @@ class QuickVersion {
         $maj = [int]$Matches.major
         $min = [int]$Matches.minor
         $pat = if ($Matches.patch) { [int]$Matches.patch } else { 0 }
-        $bld = if ($Matches.build) { [int]$Matches.build } else { 0 }
+        #$bld = if ($Matches.build) { [int]$Matches.build } else { 0 }
         $lbl = $Matches.label
         $rbd = if ($Matches.rbuild) { [int]$Matches.rbuild } else { 0 }
         $rnt = $Matches.rnote
 
-        return [QuickVersion]::new($maj, $min, $pat, $bld, $lbl, $rbd, $rnt)
+        return [QuickVersion]::new($maj, $min, $pat, $lbl, $rbd, $rnt)
     }
 
     static [int] Compare([QuickVersion]$A, [QuickVersion]$B) {
-        foreach ($p in 'Major', 'Minor', 'Patch', 'Build') {
+        foreach ($p in 'Major', 'Minor', 'Patch') {
             $cmp = [Math]::Sign(($A.$p) - ($B.$p))
             if ($cmp -ne 0) { return $cmp }
         }
