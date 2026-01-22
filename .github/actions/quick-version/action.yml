@@ -125,9 +125,6 @@ runs:
             $lastVersion = [QuickVersion]::new(0,0,0,0,"",0,"")
         }
 
-        # ---------------------------------------------------------------------------------------------
-        # Compute next version based on commit messages and inputs
-        # ---------------------------------------------------------------------------------------------
         # TODO: Need to compute the next version based on commit messages and version-label input
         # if version-label is empty, use next production version based on commit messages
         # if version-label is non-empty, use the next pre-release version where the ReleaseLabel is
@@ -135,6 +132,11 @@ runs:
         # ReleaseBuild number. If no commits since last production version.
         $nextVersion = $null
         # END OF TODO
+
+        $nextVersionMajor = [QuickVersion]::new($lastVersion.Major + 1, 0, 0, 0, "", 0, "")
+        $nextVersionMinor = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor + 1, 0, 0, "", 0, "")
+        $nextVersionPatch = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch + 1, 0, "", 0, "")
+        $nextVersionBuild = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch, $lastVersion.Build + 1, "", 0, "")
 
         # Determine bump from conventional commit messages (breaking -> major, feat -> minor, fix -> patch, any other commit -> build)
         $isBreaking = ($messages | Where-Object { $_.Message -match 'BREAKING CHANGE' -or $_.Message -match 'BREAKING-CHANGE' -or ($_.Type -match '.*!$') }).Count
@@ -168,10 +170,6 @@ runs:
             $nextVersion = [QuickVersion]::new($candidate.Major, $candidate.Minor, $candidate.Patch, $candidate.Build, $inputLabel, $releaseBuild, $inputMetadata)
         }
 
-        $nextVersionMajor = [QuickVersion]::new($lastVersion.Major + 1, 0, 0, 0, "", 0, "")
-        $nextVersionMinor = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor + 1, 0, 0, "", 0, "")
-        $nextVersionPatch = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch + 1, 0, "", 0, "")
-        $nextVersionBuild = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch, $lastVersion.Build + 1, "", 0, "")
 
         # ---------------------------------------------------------------------------------------------
         # Display (or set outputs in a composite action)
