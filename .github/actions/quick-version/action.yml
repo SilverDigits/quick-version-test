@@ -13,11 +13,11 @@ inputs:
   include-paths:
     description: "Semicolon-separated glob/prefix patterns to INCLUDE commits by changed paths (e.g. src/;lib/). Empty = include all commits."
     required: false
-    default: ""
+    default: "src/;lib/;source/"
   exclude-paths:
     description: "Semicolon-separated glob/prefix patterns to EXCLUDE commits by changed paths (e.g. docs/;test/)."
     required: false
-    default: ""
+    default: ".github/;tests/;docs/"
 
 outputs:
   major:
@@ -109,8 +109,8 @@ runs:
         $stopMessages = $false
 
         # Use NUL-delimited output for robust parsing
-        $raw = git log --no-color --pretty=format:"%H%x00%B%x00"
-        $tokens = $raw -split ([string][char]0)
+        # $raw = git log --no-color --pretty=format:"%H%x00%B%x00"
+        # $tokens = $raw -split ([string][char]0)
         # for ($i = 0; $i -lt $tokens.Length - 1; $i += 2) {
         #     $sha = $tokens[$i]
         #     $body = $tokens[$i + 1]
@@ -129,9 +129,13 @@ runs:
         #         foreach ($m in $msgs) { $messages.Add($m) | Out-Null }
         #     }
         # }
-        for ($i = 0; $i -lt $tokens.Length - 1; $i += 2) {
-            $sha = $tokens[$i]
-            $body = $tokens[$i + 1]
+        $raw = git log --no-color --pretty=format:"%H%x01%B%x02"
+        $records = ($raw -split ([char]2)) | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+        foreach ($rec in $records) {
+            $parts = $rec -split ([char]1), 2
+            if ($parts.Count -lt 2) { continue }
+            $sha = $parts[0].Trim()
+            $body = $parts[1]
 
             # If this commit has a Production Release tag and we haven't cut off yet,
             # skip messages for this commit AND all older ones.
@@ -143,7 +147,22 @@ runs:
             }
 
             # --- path filtering: skip commits that don't touch include paths or that match exclude paths
-            $files = git diff-tree --no-commit-id --name-only -r $sha | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            # guard against empty/invalid SHAs (prevents "ambiguous argument ''" from git)
+            if ([string]::IsNullOrWhiteSpace($sha) -or -not ($sha -match '^[0-9a-f]{7,40}$')) { continue }
+
+            # use '--' to separate revisions from paths and capture failures safely
+            try {
+                $filesRaw = git diff-tree --no-commit-id --name-only -r $sha -- 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warning ("git diff-tree failed for commit '{0}': {1}" -f $sha, ($filesRaw -join "`n"))
+                    $files = @()
+                } else {
+                    $files = $filesRaw | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                }
+            } catch {
+                Write-Warning ("git diff-tree exception for commit '{0}': {1}" -f $sha, $_)
+                $files = @()
+            }
 
             if ($includePatterns.Count -gt 0) {
                 $matchedInclude = $false
@@ -173,7 +192,7 @@ runs:
                 foreach ($m in $msgs) { $messages.Add($m) | Out-Null }
             }
         }
-        
+
         # ---------------------------------------------------------------------------------------------
         # Determine lastVersion (highest Production Release) and nexts
         # ---------------------------------------------------------------------------------------------

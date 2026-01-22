@@ -51,7 +51,9 @@ jobs:
         with:
           version-label: ${{ steps.package_options.outputs.label }}
           build-metadata: 'sha${{ github.sha }}'
-      
+          include-paths: 'src/;source/;lib/'
+          exclude-paths: 'docs/;tests/;.github/'
+
       - name: Display Version Info
         shell: pwsh
         run: |
