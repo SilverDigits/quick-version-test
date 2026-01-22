@@ -75,30 +75,36 @@ jobs:
           Write-Host "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
 
 
-      # # -------------------------------------------
-      # # Create Release Tag (push to staging and main only)
-      # # -------------------------------------------
-      # - name: Create Release Tag
-      #   id: tags
-      #   #if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release == 'yes' }}
-      #   if: steps.gates.outputs.should_release
-      #   run: |
-      #     $tag = "v$env:GitVersion_SemVer"
-      #     Write-Host "Tagging release as $tag"
-      #     git config user.name "github-actions"
-      #     git config user.email "github-actions@github.com"
-      #     git tag $tag
-      #     git push origin $tag
+      # -------------------------------------------
+      # Create Release Tag (push to staging and main only)
+      # -------------------------------------------
+      - name: Create Release Tag
+        id: tags
+        #if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release == 'yes' }}
+        if: steps.package_options.outputs.build == 'true'
+        shell: pwsh
+        run: |
+          $version = '${{ steps.version.outputs.version }}'
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            Write-Error 'No version found from quick-version; aborting tag creation.'
+            exit 1
+          } 
+          $tag = "v$version"
+          Write-Host "Tagging release as $tag"
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git tag $tag
+          git push origin $tag
 
-      # # -------------------------------------------
-      # # Re-checkout tag if one was just created
-      # # -------------------------------------------
-      # - name: Checkout Tag for Release
-      #   if: steps.gates.outputs.should_release
-      #   uses: actions/checkout@v4
-      #   with:
-      #     fetch-depth: 0
-      #     ref: v${{ steps.gitversion.outputs.SemVer }}
+      # -------------------------------------------
+      # Re-checkout tag if one was just created
+      # -------------------------------------------
+      - name: Checkout Tag for Release
+        if: steps.package_options.outputs.build == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: v${{ steps.version.outputs.version }}
 
 
       - name: Generate Package Artifacts (if applicable)
