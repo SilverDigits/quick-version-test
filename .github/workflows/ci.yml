@@ -4,7 +4,7 @@ on:
   push:
    branches: [ 'main' ]
   pull_request:
-    branches: [ 'main' ]
+    branches: ['main']
   workflow_dispatch:
 jobs:
   build:
@@ -24,13 +24,7 @@ jobs:
 
           $label = ""
           $build = $true
-          if ($event -eq 'pull_request' -and $base -eq 'staging') {
-            $label = 'alpha'
-          }
-          elseif ($event -eq 'push' -and $ref -eq 'staging') {
-            $label = 'beta'
-          }
-          elseif ($event -eq 'pull_request' -and $base -eq 'main') {
+          if ($event -eq 'pull_request' -and $base -eq 'main') {
             $label = 'rc'
           }
           elseif ($event -eq 'push' -and $ref -eq 'main') {
@@ -57,6 +51,20 @@ jobs:
       - name: Display Version Info
         shell: pwsh
         run: |
+
+          Write-Host "QuickVer.lastVersion: ${{ steps.package_options.outputs.lastVersion }}"
+          Write-Host "QuickVer.nextVersionMajor: ${{ steps.package_options.outputs.nextVersionMajor }}"          
+          Write-Host "QuickVer.nextVersionMinor: ${{ steps.package_options.outputs.nextVersionMinor }}"          
+          Write-Host "QuickVer.nextVersionPatch: ${{ steps.package_options.outputs.nextVersionPatch }}"          
+          Write-Host "QuickVer.nextVersionBuild: ${{ steps.package_options.outputs.nextVersionBuild }}"          
+          Write-Host "QuickVer.major           : ${{ steps.package_options.outputs.major }}"          
+          Write-Host "QuickVer.minor           : ${{ steps.package_options.outputs.minor }}"          
+          Write-Host "QuickVer.patch           : ${{ steps.package_options.outputs.patch }}"          
+          Write-Host "QuickVer.build           : ${{ steps.package_options.outputs.build }}"          
+          Write-Host "QuickVer.version         : ${{ steps.package_options.outputs.version }}"          
+          Write-Host "QuickVer.label           : ${{ steps.package_options.outputs.label }}"          
+          Write-Host "QuickVer.infoVersion     : ${{ steps.package_options.outputs.infoVersion }}"          
+
           Write-Host "Build Package: ${{ steps.package_options.outputs.build }}"
           Write-Host "Package Label: ${{ steps.package_options.outputs.label }}"
           Write-Host "Major: ${{ steps.version.outputs.major }}"
@@ -65,6 +73,33 @@ jobs:
           Write-Host "Build: ${{ steps.version.outputs.build }}"
           Write-Host "Version: ${{ steps.version.outputs.version }}"
           Write-Host "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
+
+
+      # # -------------------------------------------
+      # # Create Release Tag (push to staging and main only)
+      # # -------------------------------------------
+      # - name: Create Release Tag
+      #   id: tags
+      #   #if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release == 'yes' }}
+      #   if: steps.gates.outputs.should_release
+      #   run: |
+      #     $tag = "v$env:GitVersion_SemVer"
+      #     Write-Host "Tagging release as $tag"
+      #     git config user.name "github-actions"
+      #     git config user.email "github-actions@github.com"
+      #     git tag $tag
+      #     git push origin $tag
+
+      # # -------------------------------------------
+      # # Re-checkout tag if one was just created
+      # # -------------------------------------------
+      # - name: Checkout Tag for Release
+      #   if: steps.gates.outputs.should_release
+      #   uses: actions/checkout@v4
+      #   with:
+      #     fetch-depth: 0
+      #     ref: v${{ steps.gitversion.outputs.SemVer }}
+
 
       - name: Generate Package Artifacts (if applicable)
         if: ${{ steps.package_options.outputs.build == 'true' }}
