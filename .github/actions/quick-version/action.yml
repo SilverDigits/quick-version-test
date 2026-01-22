@@ -45,8 +45,8 @@ runs:
           exit 1
         }
 
-        $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "action.ps1"
-        . $scriptPath
+        #$scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "action.ps1"
+        . ./action.ps1
 
         # ---------------------------------------------------------------------------------------------
         # Build tag → commit map; parse all tag versions
