@@ -13,11 +13,11 @@ inputs:
   include-paths:
     description: "Semicolon-separated glob/prefix patterns to INCLUDE commits by changed paths (e.g. src/;lib/). Empty = include all commits."
     required: false
-    default: ""
+    default: "src/;lib/;source/"
   exclude-paths:
     description: "Semicolon-separated glob/prefix patterns to EXCLUDE commits by changed paths (e.g. docs/;test/)."
     required: false
-    default: ""
+    default: ".github/;tests/;docs/"
 
 outputs:
   major:
@@ -173,7 +173,7 @@ runs:
                 foreach ($m in $msgs) { $messages.Add($m) | Out-Null }
             }
         }
-        
+
         # ---------------------------------------------------------------------------------------------
         # Determine lastVersion (highest Production Release) and nexts
         # ---------------------------------------------------------------------------------------------
