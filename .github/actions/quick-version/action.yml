@@ -143,7 +143,22 @@ runs:
             }
 
             # --- path filtering: skip commits that don't touch include paths or that match exclude paths
-            $files = git diff-tree --no-commit-id --name-only -r $sha | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+            # guard against empty/invalid SHAs (prevents "ambiguous argument ''" from git)
+            if ([string]::IsNullOrWhiteSpace($sha)) { continue }
+
+            # use '--' to separate revisions from paths and capture failures safely
+            try {
+                $filesRaw = git diff-tree --no-commit-id --name-only -r $sha -- 2>&1
+                if ($LASTEXITCODE -ne 0) {
+                    Write-Warning ("git diff-tree failed for commit '{0}': {1}" -f $sha, ($filesRaw -join "`n"))
+                    $files = @()
+                } else {
+                    $files = $filesRaw | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+                }
+            } catch {
+                Write-Warning ("git diff-tree exception for commit '{0}': {1}" -f $sha, $_)
+                $files = @()
+            }
 
             if ($includePatterns.Count -gt 0) {
                 $matchedInclude = $false
