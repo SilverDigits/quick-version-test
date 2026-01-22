@@ -44,9 +44,8 @@ runs:
           Write-Warning "A non-shallow checkout must be done prior to using quick-version, i.e., fetch-depth: 0"
           exit 1
         }
-
-        #$scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "action.ps1"
-        . ./action.ps1
+        
+        . (Join-Path $env:GITHUB_ACTION_PATH 'action.ps1')
 
         # ---------------------------------------------------------------------------------------------
         # Build tag → commit map; parse all tag versions
