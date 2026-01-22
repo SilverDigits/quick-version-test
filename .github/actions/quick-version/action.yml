@@ -47,6 +47,11 @@ runs:
   steps: 
     - id: compute
       shell: pwsh
+      env:
+        INPUT_VERSION_LABEL: ${{ inputs.version-label }}
+        INPUT_BUILD_METADATA: ${{ inputs.build-metadata }}
+        INPUT_INCLUDE_PATHS: ${{ inputs.include-paths }}
+        INPUT_EXCLUDE_PATHS: ${{ inputs.exclude-paths }}      
       run: |
         # check correct shallow file path
         if (Test-Path ".git/shallow") {
