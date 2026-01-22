@@ -56,6 +56,9 @@ runs:
 
         . (Join-Path $env:GITHUB_ACTION_PATH 'action.ps1')
 
+        # Debug: dump INPUT_* environment vars to verify input names
+        Write-Host "ENV INPUT_*:"
+        Get-ChildItem env: | Where-Object { $_.Name -like 'INPUT_*' } | ForEach-Object { Write-Host (" - {0}={1}" -f $_.Name, $_.Value) }
 
         # read include/exclude patterns (semicolons separated)
         $includeRaw = $env:INPUT_INCLUDE_PATHS
