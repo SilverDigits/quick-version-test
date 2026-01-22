@@ -1,6 +1,16 @@
 name: "Quick Version"
 description: "A simple version generate that uses commit comments and settings file to compute the next version."
 
+inputs:
+  version-label:
+    description: "The version label to append, e.g., 'rc' or 'beta'. If empty, no label is appended."
+    required: false
+    default: ""
+  build-metadata:
+    description: "The build metadata to append, e.g., 'sha1234567'. If empty, no build metadata is appended."
+    required: false
+    default: ""
+
 outputs:
   major:
     description: "The major version number"
@@ -30,9 +40,6 @@ runs:
     - id: compute
       shell: pwsh
       run: |
-
-
-
         if(Test-Path "./git/shallow") {
           Write-Warning "A non-shallow checkout must be done prior to using quick-version, i.e., fetch-depth: 0"
           exit 1
@@ -41,9 +48,9 @@ runs:
         $scriptPath = Join-Path -Path $PSScriptRoot -ChildPath "action.ps1"
         . $scriptPath
 
-        # -----------------------------
+        # ---------------------------------------------------------------------------------------------
         # Build tag → commit map; parse all tag versions
-        # -----------------------------
+        # ---------------------------------------------------------------------------------------------
         $tagLines = git for-each-ref refs/tags --format="%(refname:short)|%(objecttype)|%(objectname)|%(taggedobject)"
         $tagMap = @{}  # commitSha -> List[QuickVersion]
         $allVersions = New-Object 'System.Collections.Generic.List[QuickVersion]'
@@ -57,7 +64,7 @@ runs:
             # Resolve commit SHA for lightweight vs annotated tags
             $commitSha = if ($otype -eq 'tag' -and -not [string]::IsNullOrWhiteSpace($tagged)) { $tagged } else { $obj }
 
-            $ver = Parse-VersionString -Tag $name
+            $ver = [QuickVersion]::Parse($name)
             if ($null -ne $ver) {
                 if (-not $tagMap.ContainsKey($commitSha)) {
                     $tagMap[$commitSha] = New-Object 'System.Collections.Generic.List[QuickVersion]'
@@ -67,83 +74,81 @@ runs:
             }
         }
 
-        
+        # ---------------------------------------------------------------------------------------------
+        # Walk commits newest → oldest
+        # Stop collecting messages at the first commit that has a Production Release tag.
+        # STILL continue collecting versions (done above from tags).
+        # ---------------------------------------------------------------------------------------------
+        $messages = New-Object 'System.Collections.Generic.List[QuickVersionMessage]'
+        $stopMessages = $false
 
-# -----------------------------
-# Walk commits newest → oldest
-# Stop collecting messages at the first commit that has a Production Release tag.
-# STILL continue collecting versions (done above from tags).
-# -----------------------------
-$messages = New-Object 'System.Collections.Generic.List[QucikVersionMessage]'
-$stopMessages = $false
+        # Use NUL-delimited output for robust parsing
+        $raw = git log --no-color --pretty=format:"%H%x00%B%x00"
+        $tokens = $raw -split ([string][char]0)
+        for ($i = 0; $i -lt $tokens.Length - 1; $i += 2) {
+            $sha = $tokens[$i]
+            $body = $tokens[$i + 1]
 
-# Use NUL-delimited output for robust parsing
-$raw = git log --no-color --pretty=format:"%H%x00%B%x00"
-$tokens = $raw -split ([string][char]0)
-for ($i = 0; $i -lt $tokens.Length - 1; $i += 2) {
-    $sha = $tokens[$i]
-    $body = $tokens[$i + 1]
+            # If this commit has a Production Release tag and we haven't cut off yet,
+            # skip messages for this commit AND all older ones.
+            if (-not $stopMessages -and $tagMap.ContainsKey($sha)) {
+                if ($tagMap[$sha] | Where-Object { $_.IsProduction() }) {
+                    $stopMessages = $true
+                    continue  # do not process messages for this commit
+                }
+            }
 
-    # If this commit has a Production Release tag and we haven't cut off yet,
-    # skip messages for this commit AND all older ones.
-    if (-not $stopMessages -and $tagMap.ContainsKey($sha)) {
-        if ($tagMap[$sha] | Where-Object { $_.IsProduction() }) {
-            $stopMessages = $true
-            continue  # do not process messages for this commit
+            if (-not $stopMessages) {
+                $msgs = [QuickVersionMessage]::Parse($body)
+                foreach ($m in $msgs) { $messages.Add($m) | Out-Null }
+            }
         }
-    }
 
-    if (-not $stopMessages) {
-        $msgs = Extract-ConventionalMessages -CommitMessage $body
-        foreach ($m in $msgs) { $messages.Add($m) | Out-Null }
-    }
-}
+        # ---------------------------------------------------------------------------------------------
+        # Determine lastVersion (highest Production Release) and nexts
+        # ---------------------------------------------------------------------------------------------
+        $prodVersions = $allVersions | Where-Object { $_.IsProduction() }
 
-# -----------------------------
-# Determine lastVersion (highest Production Release) and nexts
-# -----------------------------
-$prodVersions = $allVersions | Where-Object { $_.IsProduction() }
+        if ($prodVersions.Count -gt 0) {
+            $lastVersion = $prodVersions | Sort-Object `
+                @{ e = { $_.Major }; Descending = $true }, `
+                @{ e = { $_.Minor }; Descending = $true }, `
+                @{ e = { $_.Patch }; Descending = $true }, `
+                @{ e = { $_.Build }; Descending = $true } `
+                | Select-Object -First 1
+        } else {
+            # No production version found; treat as 0.0.0.0 baseline
+            $lastVersion = [QuickVersion]::new(0,0,0,0,"",0,"")
+        }
 
-if ($prodVersions.Count -gt 0) {
-    $lastVersion = $prodVersions | Sort-Object `
-        @{ e = { $_.Major }; Descending = $true }, `
-        @{ e = { $_.Minor }; Descending = $true }, `
-        @{ e = { $_.Patch }; Descending = $true }, `
-        @{ e = { $_.Build }; Descending = $true } `
-        | Select-Object -First 1
-} else {
-    # No production version found; treat as 0.0.0.0 baseline
-    $lastVersion = [QucikVersionRelease]::new(0,0,0,0,"",0,"")
-}
+        $nextVersionMajor = [QuickVersion]::new($lastVersion.Major + 1, 0, 0, 0, "", 0, "")
+        $nextVersionMinor = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor + 1, 0, 0, "", 0, "")
+        $nextVersionPatch = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch + 1, 0, "", 0, "")
+        $nextVersionBuild = [QuickVersion]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch, $lastVersion.Build + 1, "", 0, "")
 
-$nextVersionMajor = [QucikVersionRelease]::new($lastVersion.Major + 1, 0, 0, 0, "", 0, "")
-$nextVersionMinor = [QucikVersionRelease]::new($lastVersion.Major, $lastVersion.Minor + 1, 0, 0, "", 0, "")
-$nextVersionPatch = [QucikVersionRelease]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch + 1, 0, "", 0, "")
-$nextVersionBuild = [QucikVersionRelease]::new($lastVersion.Major, $lastVersion.Minor, $lastVersion.Patch, $lastVersion.Build + 1, "", 0, "")
+        # ---------------------------------------------------------------------------------------------
+        # Display (or set outputs in a composite action)
+        # ---------------------------------------------------------------------------------------------
+        Write-Host "Production versions found: $($prodVersions.Count)"
+        Write-Host "Last production version : $($lastVersion.ToString())"
+        Write-Host "Next major              : $($nextVersionMajor.ToString())"
+        Write-Host "Next minor              : $($nextVersionMinor.ToString())"
+        Write-Host "Next patch              : $($nextVersionPatch.ToString())"
+        Write-Host "Next build              : $($nextVersionBuild.ToString())"
+        Write-Host ""
+        Write-Host "Conventional commit messages collected (newest → oldest, until latest prod tag): $($messages.Count)"
+        $messages | ForEach-Object { Write-Host (" - {0}: {1}" -f $_.Type, $_.Message) }
 
-# -----------------------------
-# Display (or set outputs in a composite action)
-# -----------------------------
-Write-Host "Production versions found: $($prodVersions.Count)"
-Write-Host "Last production version : $($lastVersion.ToString())"
-Write-Host "Next major              : $($nextVersionMajor.ToString())"
-Write-Host "Next minor              : $($nextVersionMinor.ToString())"
-Write-Host "Next patch              : $($nextVersionPatch.ToString())"
-Write-Host "Next build              : $($nextVersionBuild.ToString())"
-Write-Host ""
-Write-Host "Conventional commit messages collected (newest → oldest, until latest prod tag): $($messages.Count)"
-$messages | ForEach-Object { Write-Host (" - {0}: {1}" -f $_.Type, $_.Message) }
-
-# If running inside GitHub Actions and you want outputs:
-if ($env:GITHUB_OUTPUT) {
-    # Serialize complex types as JSON
-    $jsonMessages = $messages | ConvertTo-Json -Depth 6
-    $jsonProdVers = $prodVersions | ConvertTo-Json -Depth 6
-    "lastVersion=$($lastVersion.ToString())"         >> $env:GITHUB_OUTPUT
-    "nextVersionMajor=$($nextVersionMajor.ToString())" >> $env:GITHUB_OUTPUT
-    "nextVersionMinor=$($nextVersionMinor.ToString())" >> $env:GITHUB_OUTPUT
-    "nextVersionPatch=$($nextVersionPatch.ToString())" >> $env:GITHUB_OUTPUT
-    "nextVersionBuild=$($nextVersionBuild.ToString())" >> $env:GITHUB_OUTPUT
-    "messagesJson=$jsonMessages"                     >> $env:GITHUB_OUTPUT
-    "productionVersionsJson=$jsonProdVers"           >> $env:GITHUB_OUTPUT
-}
+        # If running inside GitHub Actions and you want outputs:
+        if ($env:GITHUB_OUTPUT) {
+            # Serialize complex types as JSON
+            $jsonMessages = $messages | ConvertTo-Json -Depth 6
+            $jsonProdVers = $prodVersions | ConvertTo-Json -Depth 6
+            "lastVersion=$($lastVersion.ToString())"           >> $env:GITHUB_OUTPUT
+            "nextVersionMajor=$($nextVersionMajor.ToString())" >> $env:GITHUB_OUTPUT
+            "nextVersionMinor=$($nextVersionMinor.ToString())" >> $env:GITHUB_OUTPUT
+            "nextVersionPatch=$($nextVersionPatch.ToString())" >> $env:GITHUB_OUTPUT
+            "nextVersionBuild=$($nextVersionBuild.ToString())" >> $env:GITHUB_OUTPUT
+            "messagesJson=$jsonMessages"                       >> $env:GITHUB_OUTPUT
+            "productionVersionsJson=$jsonProdVers"             >> $env:GITHUB_OUTPUT
+        }

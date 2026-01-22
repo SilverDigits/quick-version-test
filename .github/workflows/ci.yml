@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+on:
+  push:
+   branches: [ 'main','staging' ]
+  pull_request:
+    branches: ['staging' ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for quick-version to function properly
+
+      - name: Package Options
+        id: package_options
+        shell: pwsh
+        run: |
+          $event = "${{ github.event_name }}"
+          $ref   = "${{ github.ref_name }}"   # for push events, this is the branch name (e.g., 'main' or 'staging')
+          $base  = "${{ github.base_ref }}"   # for pull_request events, this is the target branch (e.g., 'main' or 'staging')
+
+          $label = ""
+          $build = $true
+          if ($event -eq 'pull_request' -and $base -eq 'staging') {
+            $label = 'alpha'
+          }
+          elseif ($event -eq 'push' -and $ref -eq 'staging') {
+            $label = 'beta'
+          }
+          elseif ($event -eq 'pull_request' -and $base -eq 'main') {
+            $label = 'rc'
+          }
+          elseif ($event -eq 'push' -and $ref -eq 'main') {
+            $label = ''   # explicit empty label
+          }
+          else {
+            $label = 'none'
+            $build = $false
+          }
+          "label=$label" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "build=$build" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Compute Version
+        id: version
+        uses: ./.github/actions/quick-version
+        with:
+          version-label: ${{ steps.package_options.outputs.label }}
+          build-metadata: 'sha${{ github.sha }}'
+      
+      - name: Display Version Info
+        run: |
+          echo "Build Package: ${{ steps.package_options.outputs.build }}"
+          echo "Package Label: ${{ steps.package_options.outputs.label }}
+          echo "Major: ${{ steps.version.outputs.major }}"
+          echo "Minor: ${{ steps.version.outputs.minor }}"
+          echo "Patch: ${{ steps.version.outputs.patch }}"
+          echo "Build: ${{ steps.version.outputs.build }}"
+          echo "Version: ${{ steps.version.outputs.version }}"
+          echo "InfoVersion: ${{ steps.version.outputs.infoVersion }}"
+
+
+      - name: Generate Package Artifacts (if applicable)
+        if: ${{ steps.package_options.outputs.build == 'true' }}
+        shell: pwsh
+        run: |
+          Write-Warning "Building package artifacts..."
+          echo "Generating package artifacts for version ${{ steps.version.outputs.infoVersion }}..."
+          # Add your packaging commands here

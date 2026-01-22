@@ -60,7 +60,7 @@ class QuickVersion {
         # Pre-release:         -label [.rbuild]
         # With release note:   +note
         $re = '^(?<major>[1-9]\d*)\.(?<minor>\d+)(?:\.(?<patch>\d+))?(?:\.(?<build>\d+))?(?:-(?<label>alpha|beta|rc)(?:\.(?<rbuild>\d+))?)?(?:\+(?<rnote>[a-z0-9.-]+))?$'
-        if ($s -notmatch $re) { return $null }
+        if ($s -inotmatch $re) { return $null }
 
         $maj = [int]$Matches.major
         $min = [int]$Matches.minor
