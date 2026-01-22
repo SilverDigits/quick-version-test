@@ -263,11 +263,13 @@ runs:
         # Display (or set outputs in a composite action)
         # ---------------------------------------------------------------------------------------------
         Write-Host "Production versions found: $($prodVersions.Count)"
-        Write-Host "Last production version : $($lastVersion.ToString())"
-        Write-Host "Next major              : $($nextVersionMajor.ToString())"
-        Write-Host "Next minor              : $($nextVersionMinor.ToString())"
-        Write-Host "Next patch              : $($nextVersionPatch.ToString())"
-        Write-Host "Next build              : $($nextVersionBuild.ToString())"
+        Write-Host "Base Version                 : $($lastVersion.ToString())"
+        Write-Host "Next Prodcution Major        : $($nextVersionMajor.ToString())"
+        Write-Host "Next Prodcution Minor        : $($nextVersionMinor.ToString())"
+        Write-Host "Next Prodcution Patch        : $($nextVersionPatch.ToString())"
+        Write-Host "Next Prodcution Build        : $($nextVersionBuild.ToString())"
+        Write-Host "Next Package Version:        : $($nextVersion.ToString())"
+        
         Write-Host ""
         Write-Host "Conventional commit messages collected (newest → oldest, until latest prod tag): $($messages.Count)"
         $messages | ForEach-Object { Write-Host (" - {0}: {1}" -f $_.Type, $_.Message) }
